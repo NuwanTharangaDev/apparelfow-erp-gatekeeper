@@ -1,13 +1,12 @@
 import express from 'express'
-import cors from 'cors'
 import pool from './db.js'
 import authRoutes from './routes/auth.js'
 import cookieParser from 'cookie-parser'
 import recipeRoutes from './routes/recipes.js'
+import { fileURLToPath } from 'url'
 
 const app = express()
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 app.use(express.json())
 app.use(cookieParser())
 app.use('/api/auth', authRoutes)
@@ -26,5 +25,17 @@ app.get('/api/health/db', async (req, res) => {
     res.status(500).json({ status: 'error' })
   }
 })
+app.use('/api', (req, res) => {
+  res.status(404).json({ message: 'Not found' })
+})
+
+if (process.env.NODE_ENV === 'production') {
+  const clientDist = fileURLToPath(new URL('../client/dist', import.meta.url))
+
+  app.use(express.static(clientDist))
+  app.use((req, res) => {
+    res.sendFile('index.html', { root: clientDist })
+  })
+}
 
 export default app
