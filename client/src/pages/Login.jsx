@@ -1,24 +1,6 @@
 import { useState } from 'react'
 
-const demoPassword = 'Demo@1234'
-
-const demoUsers = [
-  {
-    role: 'Cutting Supervisor',
-    email: 'supervisor@apparelflow.com',
-    note: 'Creates cutting orders',
-  },
-  {
-    role: 'Cutting Verifier',
-    email: 'verifier@apparelflow.com',
-    note: 'Counts pieces, approves or rejects',
-  },
-  {
-    role: 'Sewing Supervisor',
-    email: 'sewing@apparelflow.com',
-    note: 'Receives verified batches',
-  },
-]
+import { demoPassword, demoUsers } from '../demoUsers.js'
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -124,7 +106,7 @@ function Login({ onLogin }) {
                 type="button"
                 disabled={submitting}
                 onClick={() => signIn(demo.email, demoPassword)}
-                className="w-full rounded-lg border border-slate-500 bg-white px-4 py-3 text-left hover:bg-slate-100 disabled:opacity-60"
+                className="w-full rounded-lg border border-slate-500 bg-white px-4 py-3 text-left hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100"
               >
                 <span className="block font-semibold text-slate-900">{demo.role}</span>
                 <span className="block text-sm text-slate-600">{demo.note}</span>

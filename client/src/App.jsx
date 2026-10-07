@@ -1,5 +1,8 @@
+
 import { useEffect, useState } from 'react'
 import Login from './pages/Login.jsx'
+import Navbar from './components/Navbar.jsx'
+import { demoPassword, demoUsers } from './demoUsers.js'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -18,6 +21,22 @@ function App() {
     setUser(null)
   }
 
+  async function switchRole(role) {
+    const demo = demoUsers.find((d) => d.role === role)
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: demo.email, password: demoPassword }),
+      })
+      setUser(res.ok ? await res.json() : null)
+    } catch {
+      setUser(null)
+    }
+  }
+
   if (checking) {
     return <p className="p-8 text-slate-600">Loading...</p>
   }
@@ -27,17 +46,12 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="rounded-2xl bg-white p-8 shadow-lg">
+    <div>
+      <Navbar user={user} onSwitchRole={switchRole} onLogout={handleLogout} />
+      <main className="mx-auto max-w-6xl px-4 py-8">
         <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.fullName}</h1>
         <p className="mt-1 text-slate-600">Role: {user.role}</p>
-        <button
-          onClick={handleLogout}
-          className="mt-4 rounded-lg border border-slate-500 px-4 py-2 font-medium text-slate-900 hover:bg-slate-100"
-        >
-          Log out
-        </button>
-      </div>
+      </main>
     </div>
   )
 }
