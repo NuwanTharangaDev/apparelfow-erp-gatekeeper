@@ -11,9 +11,11 @@ function App() {
   }, [])
 
   return (
-    <div>
-      <h1>ApparelFlow ERP</h1>
-      <p>API status: {apiStatus}</p>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="rounded-2xl bg-white p-8 shadow-lg">
+        <h1 className="text-2xl font-bold text-slate-900">ApparelFlow ERP</h1>
+        <p className="mt-2 text-slate-600">API status: {apiStatus}</p>
+      </div>
     </div>
   )
 }
