@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import pool from './db.js'
 
 const app = express()
 
@@ -8,6 +9,16 @@ app.use(express.json())
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
+})
+
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() AS time')
+    res.json({ status: 'ok', time: result.rows[0].time })
+  } catch (err) {
+    console.error('Database check failed:', err.message)
+    res.status(500).json({ status: 'error' })
+  }
 })
 
 export default app
