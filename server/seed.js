@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import pool from './db.js'
+import bcrypt from 'bcryptjs'
 
 const recipes = [
   {
@@ -32,6 +33,14 @@ const recipes = [
   },
 ]
 
+const demoPassword = 'Demo@1234'
+
+const users = [
+  { email: 'supervisor@apparelflow.com', fullName: 'Nimali Perera', role: 'cutting_supervisor' },
+  { email: 'verifier@apparelflow.com', fullName: 'Kasun Silva', role: 'cutting_verifier' },
+  { email: 'sewing@apparelflow.com', fullName: 'Dilani Fernando', role: 'sewing_supervisor' },
+]
+
 try {
   for (const recipe of recipes) {
     await pool.query(
@@ -56,7 +65,19 @@ try {
       )
     }
   }
-  console.log('Recipes seeded')
+
+  const passwordHash = await bcrypt.hash(demoPassword, 10)
+
+  for (const user of users) {
+    await pool.query(
+      `INSERT INTO users (email, password_hash, role, full_name)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email) DO NOTHING`,
+      [user.email, passwordHash, user.role, user.fullName]
+    )
+  }
+
+  console.log('Seed data inserted')
 } catch (err) {
   console.error('Seeding failed:', err.message)
   process.exitCode = 1
