@@ -41,6 +41,40 @@ router.get('/queue', async (req, res) => {
   }
 })
 
+router.get('/in-progress', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT o.id, o.order_no, o.target_qty, o.fabric_roll_id, o.sewing_started_at,
+             r.name AS recipe_name,
+             v.full_name AS verifier_name,
+             s.full_name AS started_by_name
+      FROM cutting_orders o
+      JOIN recipes r ON r.id = o.recipe_id
+      JOIN verification_logs l ON l.order_id = o.id AND l.decision = 'APPROVED'
+      JOIN users v ON v.id = l.verifier_id
+      JOIN users s ON s.id = o.sewing_started_by
+      WHERE o.status = 'SEWING_IN_PROGRESS'
+      ORDER BY o.sewing_started_at DESC
+    `)
+
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        orderNo: row.order_no,
+        recipeName: row.recipe_name,
+        targetQty: row.target_qty,
+        fabricRollId: row.fabric_roll_id,
+        verifierName: row.verifier_name,
+        startedByName: row.started_by_name,
+        startedAt: row.sewing_started_at,
+      }))
+    )
+  } catch (err) {
+    console.error('Could not load in-progress orders:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id) || id < 1) {
