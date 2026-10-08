@@ -25,7 +25,7 @@ function components(n) {
   return `${n} ${n === 1 ? 'component' : 'components'}`
 }
 
-function CountTerminal({ orderId, onBack }) {
+function CountTerminal({ orderId, onBack, onDecided }) {
   const [order, setOrder] = useState(null)
   const [counts, setCounts] = useState({})
   const [error, setError] = useState('')
@@ -108,7 +108,7 @@ function CountTerminal({ orderId, onBack }) {
         setReloadKey((key) => key + 1)
         return
       }
-      onBack()
+      onDecided(`${order.orderNo} ${action === 'approve' ? 'approved' : 'rejected'}`)
     } catch {
       setDecisionError('Could not reach the server')
     } finally {
