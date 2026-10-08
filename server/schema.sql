@@ -80,3 +80,36 @@ CREATE TABLE IF NOT EXISTS verification_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_verification_logs_order ON verification_logs(order_id);
+
+CREATE OR REPLACE FUNCTION block_log_changes() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'Verification logs cannot be changed or deleted';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS verification_logs_locked ON verification_logs;
+CREATE TRIGGER verification_logs_locked
+  BEFORE UPDATE OR DELETE ON verification_logs
+  FOR EACH ROW EXECUTE FUNCTION block_log_changes();
+
+CREATE OR REPLACE FUNCTION block_verified_item_changes() RETURNS trigger AS $$
+DECLARE
+  order_status TEXT;
+BEGIN
+  SELECT status INTO order_status FROM cutting_orders WHERE id = OLD.order_id;
+
+  IF order_status IN ('VERIFIED', 'SEWING_IN_PROGRESS') THEN
+    RAISE EXCEPTION 'Counts are locked once an order is verified';
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS verification_items_locked ON verification_items;
+CREATE TRIGGER verification_items_locked
+  BEFORE UPDATE OR DELETE ON verification_items
+  FOR EACH ROW EXECUTE FUNCTION block_verified_item_changes();
