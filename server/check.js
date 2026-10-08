@@ -17,4 +17,13 @@ const items = await pool.query(
 )
 console.table(items.rows)
 
+const logs = await pool.query(
+  `SELECT o.order_no, l.decision, l.verifier_id, l.wastage_pct,
+          l.rejection_note, l.approval_note, l.decided_at
+   FROM verification_logs l
+   JOIN cutting_orders o ON o.id = l.order_id
+   ORDER BY l.id`
+)
+console.table(logs.rows)
+
 await pool.end()
