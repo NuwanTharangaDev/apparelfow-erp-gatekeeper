@@ -6,6 +6,10 @@ const lightStyles = {
   RED: 'bg-red-100 text-red-900',
 }
 
+function isCount(text) {
+  return /^\d+$/.test(text) && Number(text) <= 100000
+}
+
 function getLight(actual, expected) {
   if (actual === expected) return 'GREEN'
   return actual > expected ? 'YELLOW' : 'RED'
@@ -21,6 +25,10 @@ function CountTerminal({ orderId, onBack }) {
   const [order, setOrder] = useState(null)
   const [counts, setCounts] = useState({})
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveMessage, setSaveMessage] = useState('')
 
   useEffect(() => {
     fetch(`/api/verification/${orderId}`)
@@ -37,10 +45,42 @@ function CountTerminal({ orderId, onBack }) {
         )
       })
       .catch(() => setError('Could not load this order'))
-  }, [orderId])
+  }, [orderId, reloadKey])
 
   function handleCountChange(itemId, value) {
     setCounts((current) => ({ ...current, [itemId]: value }))
+    setSaveError('')
+    setSaveMessage('')
+  }
+
+  async function handleSave() {
+    setSaveError('')
+    setSaveMessage('')
+    setSaving(true)
+
+    const entries = order.items
+      .filter((item) => (counts[item.id] ?? '') !== '')
+      .map((item) => ({ itemId: item.id, actualQty: Number(counts[item.id]) }))
+
+    try {
+      const res = await fetch(`/api/verification/${orderId}/counts`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: entries }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setSaveError(data.message)
+        return
+      }
+      setSaveMessage(`Saved ${data.saved} counts`)
+      setReloadKey((key) => key + 1)
+    } catch {
+      setSaveError('Could not reach the server')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (error) {
@@ -59,6 +99,13 @@ function CountTerminal({ orderId, onBack }) {
   if (!order) {
     return <p className="text-slate-600">Loading order...</p>
   }
+
+  const hasProblem = order.items.some((item) => {
+    const typed = counts[item.id] ?? ''
+    return (typed !== '' && !isCount(typed)) || (item.actualQty !== null && typed === '')
+  })
+  const hasTyped = order.items.some((item) => (counts[item.id] ?? '') !== '')
+  const canSave = hasTyped && !hasProblem && !saving
 
   return (
     <div>
@@ -87,9 +134,10 @@ function CountTerminal({ orderId, onBack }) {
           <tbody>
             {order.items.map((item) => {
               const typed = counts[item.id] ?? ''
-              const valid = /^\d+$/.test(typed) && Number(typed) <= 100000
+              const valid = isCount(typed)
               const light = valid ? getLight(Number(typed), item.expectedQty) : null
-              const invalid = typed !== '' && !valid
+              const blankedSaved = item.actualQty !== null && typed === ''
+              const invalid = (typed !== '' && !valid) || blankedSaved
 
               return (
                 <tr key={item.id} className="border-b border-slate-200 align-top text-slate-900">
@@ -109,7 +157,7 @@ function CountTerminal({ orderId, onBack }) {
                     />
                     {invalid && (
                       <p id={`error-${item.id}`} role="alert" className="mt-1 text-xs font-medium text-red-700">
-                        ⚠ Whole number from 0 to 100000
+                        ⚠ {blankedSaved ? 'A saved count cannot be left empty' : 'Whole number from 0 to 100000'}
                       </p>
                     )}
                   </td>
@@ -129,6 +177,26 @@ function CountTerminal({ orderId, onBack }) {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={!canSave}
+          className="rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white hover:bg-blue-800 disabled:bg-slate-600"
+        >
+          {saving ? 'Saving...' : 'Save counts'}
+        </button>
+        {saveMessage && (
+          <p role="status" className="text-sm font-medium text-green-800">
+            ✓ {saveMessage}
+          </p>
+        )}
+        {saveError && (
+          <p role="alert" className="text-sm font-medium text-red-700">
+            ⚠ {saveError}
+          </p>
+        )}
       </div>
     </div>
   )
