@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS cutting_orders (
 
 CREATE INDEX IF NOT EXISTS idx_cutting_orders_status ON cutting_orders(status);
 
+ALTER TABLE cutting_orders
+  ADD COLUMN IF NOT EXISTS sewing_started_by INTEGER REFERENCES users(id),
+  ADD COLUMN IF NOT EXISTS sewing_started_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS verification_items (
   id SERIAL PRIMARY KEY,
   order_id INTEGER NOT NULL REFERENCES cutting_orders(id),
