@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx'
 import Orders from './pages/Orders.jsx'
 import { demoPassword, demoUsers } from './demoUsers.js'
 import Verification from './pages/Verification.jsx'
+import Sewing from './pages/Sewing.jsx'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -52,12 +53,7 @@ function App() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         {user.role === 'cutting_supervisor' && <Orders />}
         {user.role === 'cutting_verifier' && <Verification />}
-        {user.role === 'sewing_supervisor' && (
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.fullName}</h1>
-            <p className="mt-1 text-slate-600">Your workspace is coming soon.</p>
-          </div>
-        )}
+        {user.role === 'sewing_supervisor' && <Sewing />}
       </main>
     </div>
   )
