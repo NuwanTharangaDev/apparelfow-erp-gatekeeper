@@ -174,4 +174,93 @@ router.put('/:id/counts', async (req, res) => {
   }
 })
 
+router.post('/:id/approve', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).json({ message: 'Order not found' })
+  }
+
+  const note = req.body?.note
+  if (note !== undefined && (typeof note !== 'string' || note.trim().length > 500)) {
+    return res.status(422).json({ message: 'Note must be text of up to 500 characters' })
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const orderResult = await client.query(
+      `SELECT status, actual_fabric_yds,
+              expected_fabric_yds::float8 AS expected_fabric_yds,
+              wastage_cap::float8 AS wastage_cap
+       FROM cutting_orders WHERE id = $1 FOR UPDATE`,
+      [id]
+    )
+    const order = orderResult.rows[0]
+    if (!order) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ message: 'Order not found' })
+    }
+    if (order.status !== 'PENDING_VERIFICATION') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({
+        message: `This order is ${order.status} and cannot be approved`,
+      })
+    }
+
+    const itemResult = await client.query(
+      `SELECT c.component_name, i.expected_qty, i.actual_qty
+       FROM verification_items i
+       JOIN recipe_components c ON c.id = i.component_id
+       WHERE i.order_id = $1
+       ORDER BY c.id`,
+      [id]
+    )
+
+    const problems = []
+    const variances = []
+    for (const row of itemResult.rows) {
+      const { component_name: name, expected_qty: expected, actual_qty: actual } = row
+
+      if (actual === null) {
+        problems.push({ name, reason: 'Not counted yet' })
+        continue
+      }
+
+      const light = getLight(actual, expected)
+      if (light === 'RED') {
+        problems.push({ name, reason: `Short by ${expected - actual} pieces` })
+      }
+      variances.push({ name, expected, actual, variance: actual - expected, light })
+    }
+
+    if (itemResult.rows.length === 0 || problems.length > 0) {
+      await client.query('ROLLBACK')
+      return res.status(422).json({ message: 'This batch cannot be approved', problems })
+    }
+
+    const wastagePct = getWastagePct(order.actual_fabric_yds, order.expected_fabric_yds)
+
+    await client.query(
+      `UPDATE cutting_orders SET status = 'VERIFIED', updated_at = NOW() WHERE id = $1`,
+      [id]
+    )
+    await client.query(
+      `INSERT INTO verification_logs
+         (order_id, verifier_id, decision, approval_note, wastage_pct, variance_snapshot)
+       VALUES ($1, $2, 'APPROVED', $3, $4, $5)`,
+      [id, req.user.id, note?.trim() || null, wastagePct, JSON.stringify(variances)]
+    )
+
+    await client.query('COMMIT')
+    res.json({ id, status: 'VERIFIED', wastagePct, overCap: wastagePct > order.wastage_cap })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    console.error('Could not approve order:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
+  } finally {
+    client.release()
+  }
+})
+
 export default router
