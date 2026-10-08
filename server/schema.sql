@@ -64,3 +64,19 @@ CREATE TABLE IF NOT EXISTS verification_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_verification_items_order ON verification_items(order_id);
+
+
+CREATE TABLE IF NOT EXISTS verification_logs (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES cutting_orders(id),
+  verifier_id INTEGER NOT NULL REFERENCES users(id),
+  decision TEXT NOT NULL CHECK (decision IN ('APPROVED', 'REJECTED')),
+  rejection_note TEXT,
+  approval_note TEXT,
+  wastage_pct NUMERIC(7, 2) NOT NULL,
+  variance_snapshot JSONB NOT NULL,
+  decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (decision <> 'REJECTED' OR LENGTH(TRIM(COALESCE(rejection_note, ''))) >= 5)
+);
+
+CREATE INDEX IF NOT EXISTS idx_verification_logs_order ON verification_logs(order_id);
