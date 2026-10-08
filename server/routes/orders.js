@@ -141,4 +141,49 @@ router.post('/:id/submit', requireRole('cutting_supervisor'), async (req, res) =
   }
 })
 
+router.post('/:id/resubmit', requireRole('cutting_supervisor'), async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).json({ message: 'Order not found' })
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const { rows } = await client.query(
+      'SELECT status FROM cutting_orders WHERE id = $1 FOR UPDATE',
+      [id]
+    )
+    if (rows.length === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ message: 'Order not found' })
+    }
+    if (rows[0].status !== 'REJECTED') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({
+        message: `This order is ${rows[0].status} and cannot be resubmitted`,
+      })
+    }
+
+    await client.query(
+      'UPDATE verification_items SET actual_qty = NULL, status = NULL WHERE order_id = $1',
+      [id]
+    )
+    await client.query(
+      `UPDATE cutting_orders SET status = 'PENDING_VERIFICATION', updated_at = NOW() WHERE id = $1`,
+      [id]
+    )
+
+    await client.query('COMMIT')
+    res.json({ id, status: 'PENDING_VERIFICATION' })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    console.error('Could not resubmit order:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
+  } finally {
+    client.release()
+  }
+})
+
 export default router
