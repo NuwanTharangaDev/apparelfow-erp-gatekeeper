@@ -6,6 +6,7 @@ import recipeRoutes from './routes/recipes.js'
 import { fileURLToPath } from 'url'
 import orderRoutes from './routes/orders.js'
 import verificationRoutes from './routes/verification.js'
+import sewingRoutes from './routes/sewing.js'
 
 const app = express()
 
@@ -15,6 +16,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api/verification', verificationRoutes)
+app.use('/api/sewing', sewingRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
