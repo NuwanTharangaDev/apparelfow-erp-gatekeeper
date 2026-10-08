@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.js'
 import cookieParser from 'cookie-parser'
 import recipeRoutes from './routes/recipes.js'
 import { fileURLToPath } from 'url'
+import orderRoutes from './routes/orders.js'
 
 const app = express()
 
@@ -11,6 +12,7 @@ app.use(express.json())
 app.use(cookieParser())
 app.use('/api/auth', authRoutes)
 app.use('/api/recipes', recipeRoutes)
+app.use('/api/orders', orderRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
@@ -37,5 +39,15 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile('index.html', { root: clientDist })
   })
 }
+
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ message: 'Request body is not valid JSON' })
+  }
+  console.error('Unhandled error:', err.message)
+  res.status(500).json({ message: 'Something went wrong' })
+})
+
+
 
 export default app

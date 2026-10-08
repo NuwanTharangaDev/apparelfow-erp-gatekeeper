@@ -11,42 +11,6 @@ router.post('/', requireRole('cutting_supervisor'), async (req, res) => {
   const { recipeId, targetQty, fabricRollId, actualFabricYds } = req.body ?? {}
   const errors = {}
 
-router.get('/', requireRole('cutting_supervisor'), async (req, res) => {
-  try {
-    const { rows } = await pool.query(`
-      SELECT o.id, o.order_no, o.status, o.target_qty, o.fabric_roll_id,
-             o.actual_fabric_yds, o.expected_fabric_yds::float8 AS expected_fabric_yds,
-             o.created_at, r.recipe_code, r.name AS recipe_name,
-             (SELECT l.rejection_note FROM verification_logs l
-              WHERE l.order_id = o.id AND l.decision = 'REJECTED'
-              ORDER BY l.decided_at DESC LIMIT 1) AS rejection_note
-      FROM cutting_orders o
-      JOIN recipes r ON r.id = o.recipe_id
-      ORDER BY o.id DESC
-    `)
-
-    res.json(
-      rows.map((row) => ({
-        id: row.id,
-        orderNo: row.order_no,
-        status: row.status,
-        recipeCode: row.recipe_code,
-        recipeName: row.recipe_name,
-        targetQty: row.target_qty,
-        fabricRollId: row.fabric_roll_id,
-        actualFabricYds: row.actual_fabric_yds,
-        expectedFabricYds: row.expected_fabric_yds,
-        rejectionNote: row.rejection_note,
-        createdAt: row.created_at,
-      }))
-    )
-  } catch (err) {
-    console.error('Could not load orders:', err.message)
-    res.status(500).json({ message: 'Something went wrong' })
-  }
-})
-
-
   if (!Number.isInteger(recipeId) || recipeId < 1) {
     errors.recipeId = 'Choose a recipe'
   }
@@ -108,6 +72,72 @@ router.get('/', requireRole('cutting_supervisor'), async (req, res) => {
     res.status(500).json({ message: 'Something went wrong' })
   } finally {
     client.release()
+  }
+})
+
+router.get('/', requireRole('cutting_supervisor'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT o.id, o.order_no, o.status, o.target_qty, o.fabric_roll_id,
+             o.actual_fabric_yds, o.expected_fabric_yds::float8 AS expected_fabric_yds,
+             o.created_at, r.recipe_code, r.name AS recipe_name,
+             (SELECT l.rejection_note FROM verification_logs l
+              WHERE l.order_id = o.id AND l.decision = 'REJECTED'
+              ORDER BY l.decided_at DESC LIMIT 1) AS rejection_note
+      FROM cutting_orders o
+      JOIN recipes r ON r.id = o.recipe_id
+      ORDER BY o.id DESC
+    `)
+
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        orderNo: row.order_no,
+        status: row.status,
+        recipeCode: row.recipe_code,
+        recipeName: row.recipe_name,
+        targetQty: row.target_qty,
+        fabricRollId: row.fabric_roll_id,
+        actualFabricYds: row.actual_fabric_yds,
+        expectedFabricYds: row.expected_fabric_yds,
+        rejectionNote: row.rejection_note,
+        createdAt: row.created_at,
+      }))
+    )
+  } catch (err) {
+    console.error('Could not load orders:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
+  }
+})
+
+router.post('/:id/submit', requireRole('cutting_supervisor'), async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).json({ message: 'Order not found' })
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE cutting_orders
+       SET status = 'PENDING_VERIFICATION', updated_at = NOW()
+       WHERE id = $1 AND status = 'CUTTING_IN_PROGRESS'`,
+      [id]
+    )
+
+    if (result.rowCount === 0) {
+      const { rows } = await pool.query('SELECT status FROM cutting_orders WHERE id = $1', [id])
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Order not found' })
+      }
+      return res.status(409).json({
+        message: `This order is ${rows[0].status} and cannot be submitted`,
+      })
+    }
+
+    res.json({ id, status: 'PENDING_VERIFICATION' })
+  } catch (err) {
+    console.error('Could not submit order:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
   }
 })
 
