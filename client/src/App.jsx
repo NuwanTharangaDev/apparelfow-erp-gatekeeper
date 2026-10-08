@@ -1,8 +1,9 @@
-
 import { useEffect, useState } from 'react'
 import Login from './pages/Login.jsx'
 import Navbar from './components/Navbar.jsx'
+import Orders from './pages/Orders.jsx'
 import { demoPassword, demoUsers } from './demoUsers.js'
+import Verification from './pages/Verification.jsx'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -49,8 +50,14 @@ function App() {
     <div>
       <Navbar user={user} onSwitchRole={switchRole} onLogout={handleLogout} />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.fullName}</h1>
-        <p className="mt-1 text-slate-600">Role: {user.role}</p>
+        {user.role === 'cutting_supervisor' && <Orders />}
+        {user.role === 'cutting_verifier' && <Verification />}
+        {user.role === 'sewing_supervisor' && (
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.fullName}</h1>
+            <p className="mt-1 text-slate-600">Your workspace is coming soon.</p>
+          </div>
+        )}
       </main>
     </div>
   )
