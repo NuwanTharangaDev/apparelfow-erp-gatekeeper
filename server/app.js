@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import recipeRoutes from './routes/recipes.js'
 import { fileURLToPath } from 'url'
 import orderRoutes from './routes/orders.js'
+import verificationRoutes from './routes/verification.js'
 
 const app = express()
 
@@ -13,6 +14,7 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes)
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/orders', orderRoutes)
+app.use('/api/verification', verificationRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
