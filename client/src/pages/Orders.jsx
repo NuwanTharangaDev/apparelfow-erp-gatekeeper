@@ -9,6 +9,11 @@ const statusStyles = {
   SEWING_IN_PROGRESS: 'bg-slate-200 text-slate-900',
 }
 
+const actionLabels = {
+  CUTTING_IN_PROGRESS: 'Submit for verification',
+  REJECTED: 'Resubmit for verification',
+}
+
 function Orders() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,12 +39,14 @@ function Orders() {
     setReloadKey((key) => key + 1)
   }
 
-  async function handleSubmit(order) {
+  async function handleSend(order) {
     setActionError(null)
     setSubmittingId(order.id)
 
+    const path = order.status === 'REJECTED' ? 'resubmit' : 'submit'
+
     try {
-      const res = await fetch(`/api/orders/${order.id}/submit`, { method: 'POST' })
+      const res = await fetch(`/api/orders/${order.id}/${path}`, { method: 'POST' })
       if (!res.ok) {
         const data = await res.json()
         setActionError({ orderId: order.id, message: data.message })
@@ -113,13 +120,13 @@ function Orders() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {order.status === 'CUTTING_IN_PROGRESS' ? (
+                    {actionLabels[order.status] ? (
                       <button
-                        onClick={() => handleSubmit(order)}
+                        onClick={() => handleSend(order)}
                         disabled={submittingId === order.id}
                         className="rounded-lg border border-blue-700 px-3 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50 disabled:border-slate-400 disabled:bg-slate-100 disabled:text-slate-700"
                       >
-                        {submittingId === order.id ? 'Submitting...' : 'Submit for verification'}
+                        {submittingId === order.id ? 'Sending...' : actionLabels[order.status]}
                       </button>
                     ) : (
                       <span className="text-slate-600">-</span>
