@@ -24,3 +24,43 @@ CREATE TABLE IF NOT EXISTS recipe_components (
   image_url TEXT,
   UNIQUE (recipe_id, component_name)
 );
+
+
+CREATE SEQUENCE IF NOT EXISTS cutting_order_no_seq;
+
+CREATE TABLE IF NOT EXISTS cutting_orders (
+  id SERIAL PRIMARY KEY,
+  order_no TEXT NOT NULL UNIQUE
+    DEFAULT 'CO-' || LPAD(NEXTVAL('cutting_order_no_seq')::TEXT, 4, '0'),
+  recipe_id INTEGER NOT NULL REFERENCES recipes(id),
+  target_qty INTEGER NOT NULL CHECK (target_qty > 0),
+  fabric_roll_id TEXT NOT NULL CHECK (LENGTH(TRIM(fabric_roll_id)) > 0),
+  actual_fabric_yds INTEGER NOT NULL CHECK (actual_fabric_yds > 0),
+  expected_fabric_yds NUMERIC(10, 2) NOT NULL,
+  wastage_cap NUMERIC(5, 2) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CUTTING_IN_PROGRESS' CHECK (status IN (
+    'CUTTING_IN_PROGRESS',
+    'PENDING_VERIFICATION',
+    'REJECTED',
+    'VERIFIED',
+    'SEWING_IN_PROGRESS'
+  )),
+  created_by INTEGER NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cutting_orders_status ON cutting_orders(status);
+
+CREATE TABLE IF NOT EXISTS verification_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES cutting_orders(id),
+  component_id INTEGER NOT NULL REFERENCES recipe_components(id),
+  expected_qty INTEGER NOT NULL CHECK (expected_qty > 0),
+  actual_qty INTEGER CHECK (actual_qty >= 0),
+  status TEXT CHECK (status IN ('GREEN', 'YELLOW', 'RED')),
+  UNIQUE (order_id, component_id),
+  CHECK ((actual_qty IS NULL) = (status IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_verification_items_order ON verification_items(order_id);
