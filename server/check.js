@@ -2,8 +2,8 @@ import 'dotenv/config'
 import pool from './db.js'
 
 const orders = await pool.query(
-  `SELECT order_no, target_qty, actual_fabric_yds, expected_fabric_yds,
-          wastage_cap, status, created_by
+    `SELECT order_no, target_qty, actual_fabric_yds, expected_fabric_yds,
+          wastage_cap, status, created_by, sewing_started_by, sewing_started_at
    FROM cutting_orders ORDER BY id`
 )
 console.table(orders.rows)
