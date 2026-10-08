@@ -78,11 +78,13 @@ From the project root, `npm run build` builds the client and `npm start` runs Ex
 
 ## Status
 
-- [x] Database schema for users and recipes, seed data
+## Status
+
+- [x] Database schema, seed data
 - [x] Login, logout, session check, role guard
 - [x] Login page with demo accounts, navbar role switch
-- [ ] Cutting orders
-- [ ] Verification terminal and hard stop
+- [x] Cutting orders: create, submit, resubmit after rejection
+- [x] Verification terminal: counts, traffic lights, approve and reject with server hard stop
 - [ ] Sewing queue
 - [ ] Automated tests
 - [ ] Deployment
