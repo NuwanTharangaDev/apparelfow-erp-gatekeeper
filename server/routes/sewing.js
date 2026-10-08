@@ -90,4 +90,35 @@ router.get('/:id', async (req, res) => {
   }
 })
 
+router.post('/:id/start', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id < 1) {
+    return res.status(404).json({ message: 'Order not found' })
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE cutting_orders
+       SET status = 'SEWING_IN_PROGRESS', sewing_started_by = $2,
+           sewing_started_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND status = 'VERIFIED'
+       RETURNING sewing_started_at`,
+      [id, req.user.id]
+    )
+
+    if (rows.length === 0) {
+      const current = await pool.query('SELECT status FROM cutting_orders WHERE id = $1', [id])
+      if (current.rows[0]?.status === 'SEWING_IN_PROGRESS') {
+        return res.status(409).json({ message: 'Sewing has already started on this order' })
+      }
+      return res.status(404).json({ message: 'Order not found' })
+    }
+
+    res.json({ id, status: 'SEWING_IN_PROGRESS', startedAt: rows[0].sewing_started_at })
+  } catch (err) {
+    console.error('Could not start sewing:', err.message)
+    res.status(500).json({ message: 'Something went wrong' })
+  }
+})
+
 export default router
