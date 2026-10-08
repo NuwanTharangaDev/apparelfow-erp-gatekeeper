@@ -14,6 +14,7 @@ function Sewing() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState(null)
+  const [notice, setNotice] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -26,8 +27,19 @@ function Sewing() {
       .finally(() => setLoading(false))
   }, [reloadKey])
 
+  function openOrder(id) {
+    setNotice('')
+    setSelectedId(id)
+  }
+
   function handleBack() {
     setSelectedId(null)
+    setReloadKey((key) => key + 1)
+  }
+
+  function handleStarted(orderNo) {
+    setSelectedId(null)
+    setNotice(`${orderNo} is now in sewing.`)
     setReloadKey((key) => key + 1)
   }
 
@@ -44,11 +56,17 @@ function Sewing() {
   }
 
   if (selectedId) {
-    return <SewingDetail orderId={selectedId} onBack={handleBack} />
+    return <SewingDetail orderId={selectedId} onBack={handleBack} onStarted={handleStarted} />
   }
 
   return (
     <div className="space-y-10">
+      {notice && (
+        <p role="status" className="rounded-lg bg-green-100 px-4 py-3 font-medium text-green-900">
+          ✓ {notice}
+        </p>
+      )}
+
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-slate-900">Ready for sewing</h1>
@@ -94,7 +112,7 @@ function Sewing() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => setSelectedId(order.id)}
+                        onClick={() => openOrder(order.id)}
                         className="rounded-lg border border-blue-700 px-3 py-1 text-xs font-semibold text-blue-800 hover:bg-blue-50"
                       >
                         Open
