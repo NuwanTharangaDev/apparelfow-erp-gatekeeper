@@ -4,7 +4,7 @@ Cutting verification and sewing queue gate for a garment factory. A cutting batc
 
 Built for the Webtezza software engineering intern assessment.
 
-**Live URL:** not deployed yet
+**Live URL:** https://keen-elf-01b35f.netlify.app/
 
 ## Stack
 
